@@ -9,6 +9,67 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_ALIGN_VERTICAL
 import requests
 import json
+
+
+# ==========================================
+# 🎨 CONFIGURAÇÃO DA PÁGINA E ESTILO VISUAL
+# ==========================================
+st.set_page_config(page_title="Gerador de Etiquetas Entomológicas", page_icon="🪲", layout="wide")
+
+st.markdown("""
+    <style>
+        /* 1. Título principal (st.title) */
+        h1 {
+            font-size: 48px !important;
+        }
+
+        /* 2. Subtítulos da página (st.subheader) */
+        h3 {
+            font-size: 32px !important;
+        }
+
+        /* 3. Texto comum do corpo (st.write, st.markdown e frases explicativas) */
+        div[data-testid="stMarkdownContainer"] p {
+            font-size: 24px !important;
+        }
+
+        /* 4. Texto dos balões coloridos de aviso (st.success, st.info, st.error) */
+        .stAlert p {
+            font-size: 20px !important;
+        }
+
+        /* 5. Rótulos/Perguntas acima dos campos */
+        .stSidebar label, .stRadio label, .stSelectbox label, .stTextInput label, .stCheckbox label {
+            font-size: 22px !important;
+            font-weight: bold;
+        }
+
+        /* 6. TEXTO DENTRO DAS CAIXAS DE SELEÇÃO E CAMPOS DE TEXTO */
+        .stTextInput input, div[data-baseweb="select"] div {
+            font-size: 22px !important;
+        }
+
+        /* 7. TEXTO DAS OPÇÕES DO MENU SUSPENSO QUANDO ABRIR A CAIXA */
+        ul[data-baseweb="menu"] li span, div[data-baseweb="popover"] span {
+            font-size: 22px !important;
+        }
+
+        /* 8. TEXTO DOS BOTÕES DE RÁDIO (Usar coluna / Valor fixo / Não incluir) */
+        div[role="radiogroup"] p {
+            font-size: 19px !important;
+        }
+
+        /* 9. Título das caixas retráteis (st.expander) */
+        .stExpander details summary {
+            font-size: 20px !important;
+        }
+        /* 10. TEXTO DENTRO DA CAIXA DE SUGESTÕES (st.text_area) */
+        .stTextArea textarea {
+            font-size: 20px !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # ==========================================
 # 🛠️ FUNÇÕES DE FORMATAÇÃO CEMT
 # ==========================================
@@ -46,92 +107,100 @@ def remover_milesimos_segundos(coord):
     if not coord: return ""
     return re.sub(r'(\d+)\.\d+(["”\'’])', r'\1\2', str(coord))
 
-# ==========================================
-# 🎨 CONFIGURAÇÃO DA PÁGINA E ESTILO VISUAL
-# ==========================================
-st.set_page_config(page_title="Gerador Universal", page_icon="🪲", layout="wide")
+# função de carregamento de dados com cache para melhorar a performance
+@st.cache_data(show_spinner="A ler ficheiro...")
+def carregar_dados(arquivo_bytes, extensao, aba=None, linha_cab=0):
+    arquivo_bytes.seek(0)
 
-# ==========================================
-# 🎨 CONFIGURAÇÃO DA PÁGINA E ESTILO VISUAL
-# ==========================================
-st.set_page_config(page_title="Gerador Universal CEMT", page_icon="🪲", layout="wide")
+    if extensao == "csv":
+        try:
+            return pd.read_csv(arquivo_bytes, sep=None, engine="python", encoding="utf-8")
+        except UnicodeDecodeError:
+            arquivo_bytes.seek(0)
+            return pd.read_csv(arquivo_bytes, sep=None, engine="python", encoding="latin1")
+    else:
+        return pd.read_excel(arquivo_bytes, sheet_name=aba, header=linha_cab)
 
-st.markdown("""
-    <style>
-        /* 1. Título principal (st.title) */
-        h1 {
-            font-size: 48px !important;
-        }
-
-        /* 2. Subtítulos da página (st.subheader) */
-        h3 {
-            font-size: 32px !important;
-        }
-
-        /* 3. Texto comum do corpo (st.write, st.markdown e frases explicativas) */
-        div[data-testid="stMarkdownContainer"] p {
-            font-size: 24px !important;
-        }
-
-        /* 4. Texto dos balões coloridos de aviso (st.success, st.info, st.error) */
-        .stAlert p {
-            font-size: 20px !important;
-        }
-
-        /* 5. Rótulos/Perguntas acima dos campos */
-        .stSidebar label, .stRadio label, .stSelectbox label, .stTextInput label, .stCheckbox label {
-            font-size: 22px !important;
-            font-weight: bold;
-        }
-
-        /* 6. 🟢 TEXTO DENTRO DAS CAIXAS DE SELEÇÃO E CAMPOS DE TEXTO */
-        .stTextInput input, div[data-baseweb="select"] div {
-            font-size: 22px !important;
-        }
-
-        /* 7. 🟢 TEXTO DAS OPÇÕES DO MENU SUSPENSO QUANDO ABRIR A CAIXA */
-        ul[data-baseweb="menu"] li span, div[data-baseweb="popover"] span {
-            font-size: 22px !important;
-        }
-
-        /* 8. 🟢 TEXTO DOS BOTÕES DE RÁDIO (Usar coluna / Valor fixo / Não incluir) */
-        div[role="radiogroup"] p {
-            font-size: 19px !important;
-        }
-
-        /* 9. Título das caixas retráteis (st.expander) */
-        .stExpander details summary {
-            font-size: 20px !important;
-        }
-        /* 10. 🟢 TEXTO DENTRO DA CAIXA DE SUGESTÕES (st.text_area) */
-        .stTextArea textarea {
-            font-size: 20px !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 st.title("🪲 Gerador de Etiquetas Entomológicas")
 
 st.subheader("1. Carregue os Dados")
-arquivo_upload = st.file_uploader("Arraste ou escolha a planilha Excel (.xlsx)", type=["xlsx"])
+arquivo_upload = st.file_uploader("Arraste ou escolha a planilha Excel (.xlsx ou .csv)", type=["xlsx", "csv"], help="Para ficheiros CSV, o separador é detetado automaticamente.")
+
+
+# ==========================================
+# 💬 ABA DE FEEDBACK (INTEGRADA AO GOOGLE SHEETS)
+# ==========================================
+with st.sidebar.expander("💬 Feedback e Sugestões", expanded=False):
+    st.write("Encontrou algum problema ou tem sugestões de melhoria?")
+        
+    with st.form("form_feedback", clear_on_submit=True):
+        nome_user = st.text_input("Seu nome (opcional):")
+        email_user = st.text_input("Seu e-mail (opcional):")
+        mensagem_user = st.text_area("Sua sugestão ou crítica:", placeholder="Digite aqui...")
+            
+        btn_enviar = st.form_submit_button("📩 Enviar Feedback")
+            
+        if btn_enviar:
+            if not mensagem_user.strip():
+                st.warning("⚠️ Escreva uma mensagem antes de enviar.")
+            else:
+                URL_WEB_APP = "https://script.google.com/macros/s/AKfycbz1nZslEYiH98x82DJo4YKM7NV20Gtfv3FhUlBQPGYWWK3ub0rrgZ1qr_4wrw4UBBg4/exec"
+                    
+                payload = {
+                    "nome": nome_user if nome_user else "Anônimo",
+                    "email": email_user if email_user else "Não informado",
+                    "mensagem": mensagem_user
+                    }
+                    
+                try:
+                    # Usamos json.dumps e headers explícitos para garantir a entrega
+                    resposta = requests.post(
+                        URL_WEB_APP, 
+                        data=json.dumps(payload),
+                        headers={"Content-Type": "application/json"}
+                    )
+                        
+                    if resposta.status_code == 200:
+                        st.success("✅ Feedback registrado na planilha com sucesso! Obrigado.")
+                    else:
+                        st.error(f"❌ Erro ao salvar (Código HTTP {resposta.status_code}).")
+                except Exception as e:
+                    st.error("❌ Falha na conexão ao enviar o feedback.")
+
 
 if arquivo_upload is not None:
-    xls = pd.ExcelFile(arquivo_upload)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        aba_selecionada = st.selectbox("Selecione a aba da planilha:", xls.sheet_names)
-    with col2:
-        linha_cabecalho = st.number_input("Em qual linha estão os nomes das colunas?", min_value=1, value=1)
-    
-    df = pd.read_excel(arquivo_upload, sheet_name=aba_selecionada, header=linha_cabecalho - 1)
-    colunas_reais = [str(c) for c in df.columns.tolist()]
-    lista_colunas = ["--- Nenhuma ---"] + colunas_reais
-    
-    st.success(f"✅ Encontrados {len(df)} registros totais na aba '{aba_selecionada}'.")
-    
-    with st.expander("👀 Ver prévia dos dados lidos", expanded=False):
-        st.dataframe(df.head(3))
+    extensao = arquivo_upload.name.split('.')[-1].lower()
+
+    try:
+        if extensao == "csv":
+            # CSV não tem abas, usamos a nossa função direto
+            df = carregar_dados(arquivo_upload, extensao)
+            st.success(f"✅ CSV carregado com sucesso! Encontrados {len(df)} registros totais.")
+
+        elif extensao == "xlsx":
+            # Excel tem abas, então mantemos a sua lógica visual das colunas
+            xls = pd.ExcelFile(arquivo_upload)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                aba_selecionada = st.selectbox("Selecione a aba da planilha:", xls.sheet_names)
+            with col2:
+                linha_cabecalho = st.number_input("Em qual linha estão os nomes das colunas?", min_value=1, value=1)
+
+            # Lê os dados usando a função com Cache
+            df = carregar_dados(arquivo_upload, extensao, aba=aba_selecionada, linha_cab=linha_cabecalho - 1)
+            st.success(f"✅ Encontrados {len(df)} registros totais na aba '{aba_selecionada}'.")
+
+        colunas_reais = [str(c) for c in df.columns.tolist()]
+        lista_colunas = ["--- Nenhuma ---"] + colunas_reais
+
+        with st.expander("👀 Ver prévia dos dados lidos", expanded=False):
+            st.dataframe(df.head(5))
+
+    except Exception as e:
+        st.error(f"❌ Ocorreu um erro ao ler o arquivo. Verifique se ele está corrompido.\n\nDetalhe técnico: {e}")
+        st.stop() # 🛑 Paralisa o código se houver erro
 
     def mapear_campo(nome_exibicao, chave, tipo_padrao="coluna"):
         st.markdown(f"**{nome_exibicao}**")
@@ -159,7 +228,7 @@ if arquivo_upload is not None:
     # ==========================================
     st.sidebar.header("🗺️ Configurações")
 
-    # 🟢 NOVO: ABA DE FILTRAGEM
+    # ABA DE FILTRAGEM
     with st.sidebar.expander("🎯 Filtro de Seleção", expanded=True):
         st.write("Gere etiquetas apenas para linhas específicas.")
         ativar_filtro = st.checkbox("Ativar filtro de indivíduos")
@@ -170,7 +239,7 @@ if arquivo_upload is not None:
         if ativar_filtro:
             coluna_filtro = st.selectbox("Filtrar pela coluna:", colunas_reais)
             texto_filtro = st.text_input("Que contenha o texto (separe por vírgulas para mais de um):", placeholder="Ex: referência, imprimir, x")
-
+    # ABA DE MAPEAMENTO
     with st.sidebar.expander("📍 Localização", expanded=False):
         map_pais = mapear_campo("País", "pais", "fixo")
         map_estado = mapear_campo("Estado / UF", "estado")
@@ -179,14 +248,14 @@ if arquivo_upload is not None:
         map_lat = mapear_campo("Latitude", "lat")
         map_lon = mapear_campo("Longitude", "lon")
         map_alt = mapear_campo("Altitude", "alt", "nenhum") 
-
+    # ABA DE COLETA E ARMADILHA
     with st.sidebar.expander("📅 Coleta e Armadilha", expanded=False):
         map_dt_ini = mapear_campo("Data Inicial", "dt_ini")
         map_dt_fim = mapear_campo("Data Final", "dt_fim", "nenhum") 
         map_isca = mapear_campo("Armadilha / Isca", "isca", "fixo")
         map_coletor = mapear_campo("Coletor", "coletor", "fixo")
         map_id = mapear_campo("Código da Amostra", "id")
-
+    # ABA DE TAXONOMIA
     with st.sidebar.expander("🔬 Taxonomia (Opcional)", expanded=False):
         exibir_titulo_tax = st.checkbox("Exibir identificação no topo?", value=False)
         map_titulo_tax = mapear_campo("Título Taxonômico", "titulo_tax") if exibir_titulo_tax else {"tipo": "nenhum", "valor": ""}
@@ -197,7 +266,7 @@ if arquivo_upload is not None:
     st.subheader("2. Gerar Documento")
     if st.button("🚀 Gerar Etiquetas em Word"):
         
-        # 🟢 1. LÓGICA DE FILTRAGEM DOS DADOS (AGORA COM MÚLTIPLOS TERMOS)
+        # 1. LÓGICA DE FILTRAGEM DOS DADOS
         df_filtrado = df.copy()
         if ativar_filtro and texto_filtro.strip():
             # Pega no texto "FLO, PAST, CAF", separa pelas vírgulas e tira os espaços extra
@@ -227,7 +296,7 @@ if arquivo_upload is not None:
                     section.left_margin = Cm(0.5)
                     section.right_margin = Cm(0.5)
 
-                # Construindo a Grade Perfeita (15 colunas)
+                # Construindo a Grade(15 colunas)
                 colunas_etiquetas = 15
                 total_linhas_tabela = (len(df_filtrado) + colunas_etiquetas - 1) // colunas_etiquetas
 
@@ -239,7 +308,7 @@ if arquivo_upload is not None:
                 for linha in tabela.rows:
                     linha.height = Cm(0.9)
 
-                # 🟢 2. LOOP COM ÍNDICE RESETADO (Garante o alinhamento da grade)
+                # 2. LOOP COM ÍNDICE RESETADO (Garante o alinhamento da grade)
                 for index, row in df_filtrado.reset_index(drop=True).iterrows():
                     
                     r = index // colunas_etiquetas
@@ -306,43 +375,3 @@ if arquivo_upload is not None:
                     file_name="Etiquetas_CEMT.docx", 
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
-# ==========================================
-    # 💬 ABA DE FEEDBACK (INTEGRADA AO GOOGLE SHEETS)
-    # ==========================================
-    with st.sidebar.expander("💬 Feedback e Sugestões", expanded=False):
-        st.write("Encontrou algum problema ou tem sugestões de melhoria?")
-        
-        with st.form("form_feedback", clear_on_submit=True):
-            nome_user = st.text_input("Seu nome (opcional):")
-            email_user = st.text_input("Seu e-mail (opcional):")
-            mensagem_user = st.text_area("Sua sugestão ou crítica:", placeholder="Digite aqui...")
-            
-            btn_enviar = st.form_submit_button("📩 Enviar Feedback")
-            
-            if btn_enviar:
-                if not mensagem_user.strip():
-                    st.warning("⚠️ Escreva uma mensagem antes de enviar.")
-                else:
-                    # 🟢 COLE O SEU URL DO APPS SCRIPT AQUI:
-                    URL_WEB_APP = "https://script.google.com/macros/s/AKfycbz1nZslEYiH98x82DJo4YKM7NV20Gtfv3FhUlBQPGYWWK3ub0rrgZ1qr_4wrw4UBBg4/exec"
-                    
-                    payload = {
-                        "nome": nome_user if nome_user else "Anônimo",
-                        "email": email_user if email_user else "Não informado",
-                        "mensagem": mensagem_user
-                    }
-                    
-                    try:
-                        # 🟢 Usamos json.dumps e headers explícitos para garantir a entrega
-                        resposta = requests.post(
-                            URL_WEB_APP, 
-                            data=json.dumps(payload),
-                            headers={"Content-Type": "application/json"}
-                        )
-                        
-                        if resposta.status_code == 200:
-                            st.success("✅ Feedback registrado na planilha com sucesso! Obrigado.")
-                        else:
-                            st.error(f"❌ Erro ao salvar (Código HTTP {resposta.status_code}).")
-                    except Exception as e:
-                        st.error("❌ Falha na conexão ao enviar o feedback.")
