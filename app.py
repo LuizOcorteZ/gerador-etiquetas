@@ -124,6 +124,19 @@ def carregar_dados(arquivo_bytes, extensao, aba=None, linha_cab=0):
 
 st.title("🪲 Gerador de Etiquetas Entomológicas")
 
+# MANUAL DE INSTRUÇÕES DIRETO NA INTERFACE
+with st.expander("📖 Guia Rápido: Como preparar a sua planilha"):
+    st.markdown("""
+    Para garantir que o aplicativo processe e formate as suas etiquetas perfeitamente, siga estas recomendações:
+    
+    * **📁 Formatos Aceitos:** Ficheiros **Excel (`.xlsx`)** ou **CSV (`.csv`)**. O sistema detecta o separador automaticamente.
+    * **📋 Cabeçalho:** A tabela deve possuir apenas **uma linha de cabeçalho** (nomes das colunas). Evite células mescladas.
+    * **📅 Datas:** Devem estar em formato reconhecível (ex: `DD/MM/AAAA`). O sistema converte automaticamente o mês para **algarismos romanos** (ex: `15/03/2024` $\rightarrow$ `15.iii.2024`).
+    * **📍 Coordenadas:** Para a limpeza automática de milésimos de segundo, utilize o formato sexagesimal com aspas ou plicas explicitando os segundos (ex: `18°30'12.34"S`).
+    * **📍 Coordenadas Geográficas:** * O sistema aplica a limpeza automática de milésimos de segundo em coordenadas no formato **sexagesimal** (ex: `18°30'12.34"S`).
+    * **Outros formatos** (como graus decimais, ex: `-18.5034`) também são aceitos e impressos diretamente, sem quebrar o aplicativo.
+    """)
+
 st.subheader("1. Carregue os Dados")
 arquivo_upload = st.file_uploader("Arraste ou escolha a planilha Excel (.xlsx ou .csv)", type=["xlsx", "csv"], help="Para ficheiros CSV, o separador é detetado automaticamente.")
 

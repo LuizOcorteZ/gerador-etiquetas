@@ -24,7 +24,8 @@ Para garantir que o algoritmo processe e formate os dados corretamente, siga est
 * O sistema converte automaticamente o mês para **algarismos romanos** (Exemplo: `15/03/2024` → `15.iii.2024`).
 
 ### 4. Formato das Coordenadas Geográficas
-* O recurso de limpeza de milésimos de segundo busca coordenadas geográficas no formato sexagesimal com indicação explícita de segundos marcada por aspas simples ou duplas (ex: `18°30'12.34"S` ou `18°30'12'S`).
+* O recurso de limpeza automática de milésimos de segundo busca coordenadas no formato sexagesimal com indicação de segundos (ex: `18°30'12.34"S`).
+* Outros formatos de coordenadas (como graus decimais) são suportados e impressos normalmente na etiqueta, sem gerar erros no app.
 
 ---
 
