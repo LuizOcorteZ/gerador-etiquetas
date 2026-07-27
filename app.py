@@ -137,7 +137,7 @@ with st.expander("📖 Guia Rápido: Como preparar a sua planilha"):
     """)
 
 st.subheader("1. Carregue os Dados")
-arquivo_upload = st.file_uploader("Arraste ou escolha a planilha Excel (.xlsx ou .csv)", type=["xlsx", "csv"], help="Para ficheiros CSV, o separador é detetado automaticamente.")
+arquivo_upload = st.file_uploader("Arraste ou escolha a planilha Excel (.xlsx ou .csv)", type=["xlsx", "csv"], help="Para ficheiros CSV, o separador é detectado automaticamente.")
 
 
 # ==========================================
@@ -186,7 +186,7 @@ if arquivo_upload is not None:
 
     try:
         if extensao == "csv":
-            # CSV não tem abas, usamos a nossa função direto
+            # CSV não tem abas, usamos a função direto
             df = carregar_dados(arquivo_upload, extensao)
             st.success(f"✅ CSV carregado com sucesso! Encontrados {len(df)} registros totais.")
 
