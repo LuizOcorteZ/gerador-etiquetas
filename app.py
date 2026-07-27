@@ -191,7 +191,7 @@ if arquivo_upload is not None:
             st.success(f"✅ CSV carregado com sucesso! Encontrados {len(df)} registros totais.")
 
         elif extensao == "xlsx":
-            # Excel tem abas, então mantemos a sua lógica visual das colunas
+            # Excel tem abas, então se mantém a lógica visual das colunas
             xls = pd.ExcelFile(arquivo_upload)
 
             col1, col2 = st.columns(2)
@@ -212,7 +212,7 @@ if arquivo_upload is not None:
 
     except Exception as e:
         st.error(f"❌ Ocorreu um erro ao ler o arquivo. Verifique se ele está corrompido.\n\nDetalhe técnico: {e}")
-        st.stop() # 🛑 Paralisa o código se houver erro
+        st.stop() # Paralisa o código se houver erro
 
     def mapear_campo(nome_exibicao, chave, tipo_padrao="coluna"):
         st.markdown(f"**{nome_exibicao}**")
