@@ -108,7 +108,7 @@ def remover_milesimos_segundos(coord):
     return re.sub(r'(\d+)\.\d+(["”\'’])', r'\1\2', str(coord))
 
 # função de carregamento de dados com cache para melhorar a performance
-@st.cache_data(show_spinner="A ler ficheiro...")
+@st.cache_data(show_spinner="Lendo o arquivo...")
 def carregar_dados(arquivo_bytes, extensao, aba=None, linha_cab=0):
     arquivo_bytes.seek(0)
 
